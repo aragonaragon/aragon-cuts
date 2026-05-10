@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    /* shadcn tokens (dark-only app, mapped to project palette) */
+    --background: 240 7% 4%;
+    --foreground: 45 13% 89%;
+    --card: 240 6% 8%;
+    --card-foreground: 45 13% 89%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 45 13% 89%;
+    --primary: 41 56% 54%;
+    --primary-foreground: 240 7% 6%;
+    --secondary: 240 5% 14%;
+    --secondary-foreground: 45 13% 89%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 45 5% 53%;
+    --accent: 41 56% 54%;
+    --accent-foreground: 240 7% 6%;
+    --destructive: 0 56% 54%;
+    --destructive-foreground: 45 13% 89%;
+    --border: 240 5% 17%;
+    --input: 240 5% 17%;
+    --ring: 41 56% 54%;
+    --radius: 0.5rem;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    @apply bg-bg-base text-fg font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+  }
+
+  ::selection {
+    @apply bg-accent-muted text-fg;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-bg-surface;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-strong rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-fg-subtle;
+  }
+}
+
+@layer utilities {
+  .text-mono-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
