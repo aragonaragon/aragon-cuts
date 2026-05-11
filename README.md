@@ -3,9 +3,7 @@
 Convert horizontal videos to vertical 9:16 clips for YouTube Shorts, TikTok,
 Instagram Reels, and Twitch. Drop a video, set IN/OUT, click encode.
 
-![Shorts Maker screenshot](docs/screenshot.png)
-
-> _Screenshot coming soon — drop your own and replace `docs/screenshot.png`._
+![Shorts Maker](docs/hero.png)
 
 ## Features
 
