@@ -1,5 +1,4 @@
 import { FolderOpen, Settings } from "lucide-react";
-import { formatBytes } from "@/lib/time";
 import type { VideoInfo } from "@/types/video";
 
 type NvencState = "checking" | "available" | "unavailable" | "error";
@@ -19,15 +18,7 @@ export function TopBar({ nvenc, video, onOpen }: TopBarProps) {
         </h1>
         <div className="min-w-0 truncate text-sm">
           {video ? (
-            <span className="text-fg">
-              <span className="font-medium">{video.filename}</span>
-              <span className="ml-3 font-mono text-xs text-fg-muted">
-                {video.width}×{video.height} · {video.fps.toFixed(2)}fps ·{" "}
-                {formatDurationShort(video.duration)} · {video.videoCodec}
-                {video.audioCodec ? ` · ${video.audioCodec}` : ""}
-                {video.sizeBytes ? ` · ${formatBytes(video.sizeBytes)}` : ""}
-              </span>
-            </span>
+            <span className="font-medium text-fg">{video.filename}</span>
           ) : (
             <span className="text-fg-muted">no video loaded</span>
           )}
@@ -54,16 +45,6 @@ export function TopBar({ nvenc, video, onOpen }: TopBarProps) {
       </div>
     </header>
   );
-}
-
-function formatDurationShort(seconds: number): string {
-  if (seconds < 60) return `${seconds.toFixed(1)}s`;
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
-  if (m < 60) return `${m}m ${s}s`;
-  const h = Math.floor(m / 60);
-  const mr = m % 60;
-  return `${h}h ${mr}m ${s}s`;
 }
 
 function NvencBadge({ state }: { state: NvencState }) {

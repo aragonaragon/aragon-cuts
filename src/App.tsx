@@ -16,6 +16,19 @@ type NvencState = "checking" | "available" | "unavailable" | "error";
 const VIDEO_EXTENSIONS = ["mp4", "mov", "mkv", "avi", "webm", "m4v"];
 const MIN_CLIP_DURATION = 0.05;
 const CHANNEL_NAME_KEY = "shorts-maker:channel-name";
+const VOLUME_KEY = "shorts-maker:preview-volume";
+
+function loadVolume(): number {
+  try {
+    const raw = localStorage.getItem(VOLUME_KEY);
+    if (raw === null) return 1;
+    const v = parseFloat(raw);
+    if (!Number.isFinite(v)) return 1;
+    return Math.max(0, Math.min(1, v));
+  } catch {
+    return 1;
+  }
+}
 
 function App() {
   const [nvenc, setNvenc] = useState<NvencState>("checking");
@@ -34,6 +47,8 @@ function App() {
       return "";
     }
   });
+  const [volume, setVolume] = useState<number>(loadVolume);
+  const lastVolumeRef = useRef<number>(volume > 0 ? volume : 1);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -43,6 +58,26 @@ function App() {
       // ignore
     }
   }, [channelName]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VOLUME_KEY, String(volume));
+    } catch {
+      // ignore
+    }
+    if (volume > 0) {
+      lastVolumeRef.current = volume;
+    }
+    const v = videoRef.current;
+    if (v) {
+      v.volume = volume;
+      v.muted = volume === 0;
+    }
+  }, [volume, video]);
+
+  const handleToggleMute = useCallback(() => {
+    setVolume((prev) => (prev > 0 ? 0 : lastVolumeRef.current || 1));
+  }, []);
 
   // NVENC probe
   useEffect(() => {
@@ -261,11 +296,15 @@ function App() {
               video={video}
               isPlaying={isPlaying}
               currentTime={currentTime}
+              volume={volume}
               onTogglePlay={handleTogglePlay}
               onTimeUpdate={setCurrentTime}
+              onVolumeChange={setVolume}
+              onToggleMute={handleToggleMute}
               onLoadedMetadata={() => {
                 if (videoRef.current && video) {
                   videoRef.current.currentTime = 0;
+                  videoRef.current.volume = volume;
                 }
               }}
             />

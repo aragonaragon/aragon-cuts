@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Film, Play, Pause } from "lucide-react";
+import { Film, Play, Pause, Volume2, Volume1, VolumeX } from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { formatHMSms } from "@/lib/time";
 import type { VideoInfo } from "@/types/video";
@@ -8,14 +8,27 @@ type VideoPreviewProps = {
   video: VideoInfo | null;
   isPlaying: boolean;
   currentTime: number;
+  volume: number;
   onTogglePlay: () => void;
   onTimeUpdate: (t: number) => void;
   onLoadedMetadata: () => void;
+  onVolumeChange: (v: number) => void;
+  onToggleMute: () => void;
 };
 
 export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
   function VideoPreview(
-    { video, isPlaying, currentTime, onTogglePlay, onTimeUpdate, onLoadedMetadata },
+    {
+      video,
+      isPlaying,
+      currentTime,
+      volume,
+      onTogglePlay,
+      onTimeUpdate,
+      onLoadedMetadata,
+      onVolumeChange,
+      onToggleMute,
+    },
     ref,
   ) {
     if (!video) {
@@ -62,6 +75,13 @@ export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
           <div className="font-mono text-xs text-fg-muted text-mono-tabular">
             {formatHMSms(currentTime)} / {formatHMSms(video.duration)}
           </div>
+
+          <VolumeControl
+            volume={volume}
+            onVolumeChange={onVolumeChange}
+            onToggleMute={onToggleMute}
+          />
+
           <div className="ml-auto text-[10px] font-mono uppercase tracking-wider text-fg-subtle">
             Space play/pause · I = IN · O = OUT
           </div>
@@ -70,3 +90,43 @@ export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
     );
   },
 );
+
+function VolumeControl({
+  volume,
+  onVolumeChange,
+  onToggleMute,
+}: {
+  volume: number;
+  onVolumeChange: (v: number) => void;
+  onToggleMute: () => void;
+}) {
+  const muted = volume === 0;
+  const Icon = muted ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  const percent = Math.round(volume * 100);
+  return (
+    <div className="ml-3 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onToggleMute}
+        className={`flex h-7 w-7 items-center justify-center rounded-md transition hover:bg-bg-hover ${
+          muted ? "text-danger" : "text-fg-muted hover:text-fg"
+        }`}
+        aria-label={muted ? "Unmute" : "Mute"}
+        title={muted ? "Unmute" : `Mute (${percent}%)`}
+      >
+        <Icon className="h-4 w-4" />
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={volume}
+        onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+        className="h-1 w-24 cursor-pointer accent-accent"
+        aria-label="Preview volume"
+        title={`Volume ${percent}%`}
+      />
+    </div>
+  );
+}
