@@ -1,5 +1,13 @@
 import { forwardRef } from "react";
-import { Film, Play, Pause, Volume2, Volume1, VolumeX } from "lucide-react";
+import {
+  Film,
+  Play,
+  Pause,
+  Volume2,
+  Volume1,
+  VolumeX,
+  Repeat,
+} from "lucide-react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { formatHMSms } from "@/lib/time";
 import type { VideoInfo } from "@/types/video";
@@ -9,11 +17,15 @@ type VideoPreviewProps = {
   isPlaying: boolean;
   currentTime: number;
   volume: number;
+  loopMode: boolean;
   onTogglePlay: () => void;
   onTimeUpdate: (t: number) => void;
   onLoadedMetadata: () => void;
   onVolumeChange: (v: number) => void;
   onToggleMute: () => void;
+  onSetIn: () => void;
+  onSetOut: () => void;
+  onToggleLoop: () => void;
 };
 
 export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
@@ -23,11 +35,15 @@ export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
       isPlaying,
       currentTime,
       volume,
+      loopMode,
       onTogglePlay,
       onTimeUpdate,
       onLoadedMetadata,
       onVolumeChange,
       onToggleMute,
+      onSetIn,
+      onSetOut,
+      onToggleLoop,
     },
     ref,
   ) {
@@ -59,7 +75,7 @@ export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
             preload="auto"
           />
         </div>
-        <div className="flex shrink-0 items-center gap-3 border-t border-border bg-bg-surface px-4 py-2">
+        <div className="flex shrink-0 items-center gap-2 border-t border-border bg-bg-surface px-4 py-2">
           <button
             type="button"
             onClick={onTogglePlay}
@@ -72,7 +88,35 @@ export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
               <Play className="ml-0.5 h-4 w-4" />
             )}
           </button>
-          <div className="font-mono text-xs text-fg-muted text-mono-tabular">
+
+          <MarkButton
+            kind="in"
+            onClick={onSetIn}
+            title="Mark IN at playhead (I)"
+          />
+          <MarkButton
+            kind="out"
+            onClick={onSetOut}
+            title="Mark OUT at playhead (O)"
+          />
+
+          <button
+            type="button"
+            onClick={onToggleLoop}
+            title="Loop between IN and OUT (L)"
+            aria-label="Toggle loop between IN and OUT"
+            aria-pressed={loopMode}
+            className={`flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-xs font-bold transition ${
+              loopMode
+                ? "border-accent bg-accent/15 text-accent"
+                : "border-border bg-bg-elevated text-fg-muted hover:bg-bg-hover hover:text-fg"
+            }`}
+          >
+            <Repeat className="h-3.5 w-3.5" />
+            <span className="font-mono uppercase tracking-wider">loop</span>
+          </button>
+
+          <div className="ml-2 font-mono text-xs text-fg-muted text-mono-tabular">
             {formatHMSms(currentTime)} / {formatHMSms(video.duration)}
           </div>
 
@@ -83,13 +127,68 @@ export const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(
           />
 
           <div className="ml-auto text-[10px] font-mono uppercase tracking-wider text-fg-subtle">
-            Space play/pause · I = IN · O = OUT
+            Space · I · O · L · ←/→
           </div>
         </div>
       </div>
     );
   },
 );
+
+function MarkButton({
+  kind,
+  onClick,
+  title,
+}: {
+  kind: "in" | "out";
+  onClick: () => void;
+  title: string;
+}) {
+  const isIn = kind === "in";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className={`group flex h-9 items-center gap-1.5 rounded-md border bg-bg-elevated px-2.5 text-xs font-bold transition hover:bg-bg-hover ${
+        isIn
+          ? "border-in/30 text-in hover:border-in/60"
+          : "border-out/30 text-out hover:border-out/60"
+      }`}
+    >
+      <BracketIcon side={kind} />
+      <span className="font-mono uppercase tracking-wider">
+        {isIn ? "in" : "out"}
+      </span>
+    </button>
+  );
+}
+
+function BracketIcon({ side }: { side: "in" | "out" }) {
+  // Square-bracket icons matching common NLE conventions:
+  // IN  →  ▌▔▔   (vertical bar on left + top/bottom edges going right)
+  // OUT →  ▔▔▐   (vertical bar on right + top/bottom edges going left)
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
+    >
+      {side === "in" ? (
+        <path d="M4 3 L4 13 M4 3 L9 3 M4 13 L9 13" />
+      ) : (
+        <path d="M12 3 L12 13 M12 3 L7 3 M12 13 L7 13" />
+      )}
+    </svg>
+  );
+}
 
 function VolumeControl({
   volume,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -9,14 +10,36 @@ import { Timeline } from "@/components/Timeline/Timeline";
 import { BatchQueue } from "@/components/BatchQueue/BatchQueue";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { fromRaw, type RawVideoInfo, type VideoInfo } from "@/types/video";
-import { newClipId, type Clip } from "@/types/clip";
+import { newClipId, type Clip, type EncodeProgressEvent } from "@/types/clip";
 
 type NvencState = "checking" | "available" | "unavailable" | "error";
 
 const VIDEO_EXTENSIONS = ["mp4", "mov", "mkv", "avi", "webm", "m4v"];
 const MIN_CLIP_DURATION = 0.05;
-const CHANNEL_NAME_KEY = "shorts-maker:channel-name";
-const VOLUME_KEY = "shorts-maker:preview-volume";
+const STORAGE_PREFIX = "shorts-maker";
+const CHANNEL_NAME_KEY = `${STORAGE_PREFIX}:channel-name`;
+const VOLUME_KEY = `${STORAGE_PREFIX}:preview-volume`;
+const HOOK_TEXT_KEY = `${STORAGE_PREFIX}:hook-text`;
+const HOOK_DURATION_KEY = `${STORAGE_PREFIX}:hook-duration`;
+const LOOP_MODE_KEY = `${STORAGE_PREFIX}:loop-mode`;
+const WATERMARK_STYLE_KEY = `${STORAGE_PREFIX}:watermark-style`;
+const DEFAULT_HOOK_DURATION = 2.5;
+
+export type WatermarkStyle = "boxed" | "minimal" | "gold" | "outline";
+const DEFAULT_WATERMARK_STYLE: WatermarkStyle = "boxed";
+const WATERMARK_STYLES: WatermarkStyle[] = ["boxed", "minimal", "gold", "outline"];
+
+function loadWatermarkStyle(): WatermarkStyle {
+  try {
+    const raw = localStorage.getItem(WATERMARK_STYLE_KEY);
+    if (raw && (WATERMARK_STYLES as string[]).includes(raw)) {
+      return raw as WatermarkStyle;
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_WATERMARK_STYLE;
+}
 
 function loadVolume(): number {
   try {
@@ -27,6 +50,18 @@ function loadVolume(): number {
     return Math.max(0, Math.min(1, v));
   } catch {
     return 1;
+  }
+}
+
+function loadHookDuration(): number {
+  try {
+    const raw = localStorage.getItem(HOOK_DURATION_KEY);
+    if (raw === null) return DEFAULT_HOOK_DURATION;
+    const v = parseFloat(raw);
+    if (!Number.isFinite(v)) return DEFAULT_HOOK_DURATION;
+    return Math.max(1, Math.min(5, v));
+  } catch {
+    return DEFAULT_HOOK_DURATION;
   }
 }
 
@@ -47,6 +82,24 @@ function App() {
       return "";
     }
   });
+  const [hookText, setHookText] = useState<string>(() => {
+    try {
+      return localStorage.getItem(HOOK_TEXT_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [hookDuration, setHookDuration] = useState<number>(loadHookDuration);
+  const [watermarkStyle, setWatermarkStyle] =
+    useState<WatermarkStyle>(loadWatermarkStyle);
+  const [thumbnails, setThumbnails] = useState<string[]>([]);
+  const [loopMode, setLoopMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(LOOP_MODE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
   const [volume, setVolume] = useState<number>(loadVolume);
   const lastVolumeRef = useRef<number>(volume > 0 ? volume : 1);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -58,6 +111,38 @@ function App() {
       // ignore
     }
   }, [channelName]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HOOK_TEXT_KEY, hookText);
+    } catch {
+      // ignore
+    }
+  }, [hookText]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HOOK_DURATION_KEY, String(hookDuration));
+    } catch {
+      // ignore
+    }
+  }, [hookDuration]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOOP_MODE_KEY, String(loopMode));
+    } catch {
+      // ignore
+    }
+  }, [loopMode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(WATERMARK_STYLE_KEY, watermarkStyle);
+    } catch {
+      // ignore
+    }
+  }, [watermarkStyle]);
 
   useEffect(() => {
     try {
@@ -77,6 +162,30 @@ function App() {
 
   const handleToggleMute = useCallback(() => {
     setVolume((prev) => (prev > 0 ? 0 : lastVolumeRef.current || 1));
+  }, []);
+
+  // Encode progress events from Rust
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    listen<EncodeProgressEvent>("encode:progress", (event) => {
+      const { clip_id, percent, speed } = event.payload;
+      setClips((prev) =>
+        prev.map((c) => {
+          if (c.id !== clip_id) return c;
+          // Only patch progress while encoding; ignore stale events post-done/failed.
+          if (c.status.kind !== "encoding" && c.status.kind !== "pending") return c;
+          return {
+            ...c,
+            status: { kind: "encoding", percent, speed: speed ?? null },
+          };
+        }),
+      );
+    }).then((u) => {
+      unlisten = u;
+    });
+    return () => {
+      unlisten?.();
+    };
   }, []);
 
   // NVENC probe
@@ -108,6 +217,18 @@ function App() {
       setCurrentTime(0);
       setIsPlaying(false);
       setClips([]);
+      setThumbnails([]);
+
+      // Generate thumbnail strip in the background; failure is non-fatal.
+      invoke<{ paths: string[] }>("generate_thumbnails", {
+        videoPath: info.path,
+        duration: info.duration,
+      })
+        .then((res) => setThumbnails(res.paths))
+        .catch((err: unknown) => {
+          // eslint-disable-next-line no-console
+          console.warn("thumbnails failed:", err);
+        });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("probe failed:", err);
@@ -174,7 +295,30 @@ function App() {
     setCurrentTime(t);
   }, []);
 
+  const handleTimeUpdate = useCallback(
+    (t: number) => {
+      setCurrentTime(t);
+      if (loopMode && outSeconds > inSeconds && t >= outSeconds - 0.02) {
+        const v = videoRef.current;
+        if (v) {
+          v.currentTime = inSeconds;
+        }
+      }
+    },
+    [loopMode, inSeconds, outSeconds],
+  );
+
   // Hotkeys
+  const setInAtPlayhead = useCallback(() => {
+    const t = videoRef.current?.currentTime ?? 0;
+    setInSeconds(Math.min(t, outSeconds - MIN_CLIP_DURATION));
+  }, [outSeconds]);
+
+  const setOutAtPlayhead = useCallback(() => {
+    const t = videoRef.current?.currentTime ?? 0;
+    setOutSeconds(Math.max(t, inSeconds + MIN_CLIP_DURATION));
+  }, [inSeconds]);
+
   useEffect(() => {
     if (!video) return;
     const handler = (e: KeyboardEvent) => {
@@ -184,11 +328,11 @@ function App() {
         e.preventDefault();
         handleTogglePlay();
       } else if (e.key === "i" || e.key === "I") {
-        const t = videoRef.current?.currentTime ?? 0;
-        setInSeconds(Math.min(t, outSeconds - MIN_CLIP_DURATION));
+        setInAtPlayhead();
       } else if (e.key === "o" || e.key === "O") {
-        const t = videoRef.current?.currentTime ?? 0;
-        setOutSeconds(Math.max(t, inSeconds + MIN_CLIP_DURATION));
+        setOutAtPlayhead();
+      } else if (e.key === "l" || e.key === "L") {
+        setLoopMode((m) => !m);
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         const v = videoRef.current;
@@ -205,7 +349,7 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [video, handleTogglePlay, inSeconds, outSeconds]);
+  }, [video, handleTogglePlay, setInAtPlayhead, setOutAtPlayhead]);
 
   // Add current IN/OUT to queue
   const handleAddClip = useCallback(() => {
@@ -226,6 +370,10 @@ function App() {
     setClips((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
+  const handleClearClips = useCallback(() => {
+    setClips([]);
+  }, []);
+
   // Encode all pending clips sequentially
   const handleEncodeAll = useCallback(async () => {
     if (!video) return;
@@ -234,16 +382,24 @@ function App() {
     const pending = clips.filter((c) => c.status.kind === "pending");
     for (const clip of pending) {
       setClips((prev) =>
-        prev.map((c) => (c.id === clip.id ? { ...c, status: { kind: "encoding" } } : c)),
+        prev.map((c) =>
+          c.id === clip.id
+            ? { ...c, status: { kind: "encoding", percent: 0, speed: null } }
+            : c,
+        ),
       );
       try {
         const result = await invoke<{ output_path: string }>("encode_short", {
           req: {
+            clip_id: clip.id,
             input_path: video.path,
             in_seconds: clip.inSeconds,
             out_seconds: clip.outSeconds,
             use_nvenc: nvenc === "available",
             watermark: channelName.trim() || null,
+            watermark_style: channelName.trim() ? watermarkStyle : null,
+            hook_text: hookText.trim() || null,
+            hook_duration: hookDuration,
           },
         });
         setClips((prev) =>
@@ -265,7 +421,7 @@ function App() {
     }
 
     setIsEncoding(false);
-  }, [video, clips, nvenc, channelName]);
+  }, [video, clips, nvenc, channelName, watermarkStyle, hookText, hookDuration]);
 
   const handleRevealOutput = useCallback((path: string) => {
     if (path) void revealItemInDir(path);
@@ -298,9 +454,13 @@ function App() {
               currentTime={currentTime}
               volume={volume}
               onTogglePlay={handleTogglePlay}
-              onTimeUpdate={setCurrentTime}
+              onTimeUpdate={handleTimeUpdate}
               onVolumeChange={setVolume}
               onToggleMute={handleToggleMute}
+              onSetIn={setInAtPlayhead}
+              onSetOut={setOutAtPlayhead}
+              loopMode={loopMode}
+              onToggleLoop={() => setLoopMode((m) => !m)}
               onLoadedMetadata={() => {
                 if (videoRef.current && video) {
                   videoRef.current.currentTime = 0;
@@ -314,6 +474,7 @@ function App() {
               inSeconds={inSeconds}
               outSeconds={outSeconds}
               enabled={!!video}
+              thumbnails={thumbnails}
               onSeek={handleSeek}
               onSetIn={setInSeconds}
               onSetOut={setOutSeconds}
@@ -322,8 +483,10 @@ function App() {
           <BatchQueue
             clips={clips}
             canAdd={canAddClip}
+            canClear={!isEncoding && clips.length > 0}
             onAdd={handleAddClip}
             onRemove={handleRemoveClip}
+            onClear={handleClearClips}
             onRevealOutput={handleRevealOutput}
           />
         </main>
@@ -335,7 +498,13 @@ function App() {
           failedCount={stats.failed}
           isEncoding={isEncoding}
           channelName={channelName}
+          watermarkStyle={watermarkStyle}
+          hookText={hookText}
+          hookDuration={hookDuration}
           onChannelNameChange={setChannelName}
+          onWatermarkStyleChange={setWatermarkStyle}
+          onHookTextChange={setHookText}
+          onHookDurationChange={setHookDuration}
           onEncode={handleEncodeAll}
         />
       </div>

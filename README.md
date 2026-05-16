@@ -8,11 +8,19 @@ Instagram Reels, and Twitch. Drop a video, set IN/OUT, click encode.
 ## Features
 
 - **Drag-and-drop** any common video format (mp4, mov, mkv, avi, webm, m4v)
-- **Visual timeline** with draggable IN / OUT handles and keyboard hotkeys
-- **Multi-clip queue** — turn a single source into multiple shorts in one pass
+- **Visual timeline** with a thumbnail strip, draggable IN / OUT handles,
+  mark buttons, and keyboard hotkeys (`Space`, `I`, `O`, `L`, arrows)
+- **Loop preview** — play between IN and OUT on repeat (press `L`) to verify
+  the clip before queuing
+- **Multi-clip queue** — turn a single source into multiple shorts in one
+  pass, with a clear-queue button and per-clip progress
+- **Live encode progress** — percent, realtime speed, and ETA per clip
 - **Blurred-background fill** keeps the original frame visible while filling
   the 9:16 canvas
-- **Channel-name watermark** — small, subtle, top-right corner
+- **Channel-name watermark** centered above the video, with four visual
+  styles (Boxed, Minimal, Gold pill, Outline)
+- **Hook text** — large gold headline in the bottom area for the first
+  1–5 seconds of every clip, with smooth fade in/out
 - **Hardware-accelerated** encoding via NVENC on NVIDIA GPUs, automatic
   fallback to libx264 on AMD / Intel / no-GPU machines
 - **Audio copied unchanged** from the source (no quality loss on the audio
@@ -45,19 +53,26 @@ bundled inside, so installation works on an offline machine.
 
 ## How to use
 
-1. **Drop a video** onto the window (or click **Open**)
+1. **Drop a video** onto the window (or click **Open**). A thumbnail strip
+   appears under the timeline a couple of seconds later.
 2. **Choose your clip:**
-   - Drag the green **I** handle for IN, the red **O** handle for OUT, OR
+   - Drag the green **I** / red **O** handles on the timeline, OR
    - Press <kbd>Space</kbd> to play, then <kbd>I</kbd> / <kbd>O</kbd> at
-     the playhead position
+     the playhead position, OR
+   - Click the **IN** / **OUT** buttons in the playback bar
    - <kbd>←</kbd> / <kbd>→</kbd> step one frame, <kbd>Shift</kbd>+arrows
      step one second
+   - Press <kbd>L</kbd> (or click the loop button) to play between IN and
+     OUT on repeat
 3. **Click "Add current IN/OUT"** to queue the clip
 4. Repeat 2–3 for as many clips as you want from the same source
-5. *(Optional)* Type a channel name in the sidebar — appears in the
-   top-right corner of every output
-6. **Click ENCODE** — outputs land in a dedicated `<source_name>_shorts/`
-   folder beside the source video
+5. *(Optional)* Add a **channel name** (top centered watermark) and pick a
+   style — Boxed, Minimal, Gold pill, or Outline
+6. *(Optional)* Add **hook text** with a duration — gold headline that
+   appears at the bottom for the first 1–5 seconds of every clip
+7. **Click ENCODE** — outputs land in a dedicated `<source_name>_shorts/`
+   folder beside the source video. The queue shows live progress, speed
+   and ETA per clip.
 
 ## Output format
 
@@ -117,16 +132,17 @@ shorts-maker/
 
 ## Roadmap
 
-Items intentionally left out of v0.1 for simplicity. PRs welcome:
+Intentionally out of scope for v0.2. PRs welcome:
 
-- Additional styles (Center Crop, Fit with Bars, Pan & Scan)
-- Encode progress bar with ETA
-- Thumbnail strip on the timeline
-- Loop preview within IN–OUT
+- Additional output styles (Center Crop, Fit with Bars, Pan & Scan)
+- Zoom-punch effect at a user-picked moment
+- Cancel an in-flight encode
 - Custom output folder picker / settings panel
 - macOS and Linux builds
-- Custom watermark position / size / image watermark
+- Image watermarks
 - Optional audio re-encode (instead of always copy)
+- Auto-captions (Whisper) — explicitly scoped out to keep the app small
+  and 100% offline by default
 
 ## License
 

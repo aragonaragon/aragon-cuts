@@ -1,20 +1,24 @@
-import { Plus, Loader2, CheckCircle2, AlertCircle, X, FolderOpen } from "lucide-react";
+import { Plus, Loader2, CheckCircle2, AlertCircle, X, FolderOpen, Trash2 } from "lucide-react";
 import { formatHMSms } from "@/lib/time";
 import type { Clip } from "@/types/clip";
 
 type BatchQueueProps = {
   clips: Clip[];
   canAdd: boolean;
+  canClear: boolean;
   onAdd: () => void;
   onRemove: (id: string) => void;
+  onClear: () => void;
   onRevealOutput: (path: string) => void;
 };
 
 export function BatchQueue({
   clips,
   canAdd,
+  canClear,
   onAdd,
   onRemove,
+  onClear,
   onRevealOutput,
 }: BatchQueueProps) {
   return (
@@ -28,15 +32,29 @@ export function BatchQueue({
             {clips.length === 0 ? "" : `${clips.length} clip${clips.length === 1 ? "" : "s"}`}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onAdd}
-          disabled={!canAdd}
-          className="flex items-center gap-1.5 rounded-md border border-accent-muted bg-accent/10 px-3 py-1.5 text-xs text-accent transition hover:border-accent hover:bg-accent/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent disabled:text-fg-subtle"
-        >
-          <Plus className="h-3 w-3" />
-          Add current IN/OUT
-        </button>
+        <div className="flex items-center gap-2">
+          {clips.length > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              disabled={!canClear}
+              className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs text-fg-muted transition hover:border-danger/50 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+              title="Remove all clips from the queue"
+            >
+              <Trash2 className="h-3 w-3" />
+              Clear
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onAdd}
+            disabled={!canAdd}
+            className="flex items-center gap-1.5 rounded-md border border-accent-muted bg-accent/10 px-3 py-1.5 text-xs text-accent transition hover:border-accent hover:bg-accent/20 disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent disabled:text-fg-subtle"
+          >
+            <Plus className="h-3 w-3" />
+            Add current IN/OUT
+          </button>
+        </div>
       </div>
 
       {clips.length === 0 ? (
@@ -72,13 +90,21 @@ function ClipRow({
   onRevealOutput: (path: string) => void;
 }) {
   const duration = Math.max(0, clip.outSeconds - clip.inSeconds);
-  const isEncoding = clip.status.kind === "encoding";
-  const isDone = clip.status.kind === "done";
-  const isFailed = clip.status.kind === "failed";
+  const status = clip.status;
+  const isEncoding = status.kind === "encoding";
+  const isDone = status.kind === "done";
+  const isFailed = status.kind === "failed";
+
+  const percent = status.kind === "encoding" ? status.percent : 0;
+  const speed = status.kind === "encoding" ? status.speed : null;
+  const eta =
+    status.kind === "encoding" && speed != null && speed > 0
+      ? Math.max(0, ((100 - percent) / 100) * duration) / speed
+      : null;
 
   return (
     <div
-      className={`flex items-center gap-3 rounded border px-3 py-1.5 text-xs ${
+      className={`relative overflow-hidden rounded border px-3 py-1.5 text-xs ${
         isDone
           ? "border-success/30 bg-success/5"
           : isFailed
@@ -88,50 +114,81 @@ function ClipRow({
               : "border-border bg-bg-elevated/40"
       }`}
     >
-      <span className="w-5 shrink-0 text-center font-mono text-fg-subtle">{index}</span>
-      <StatusIcon clip={clip} />
-      <span className="font-mono text-fg-muted text-mono-tabular">
-        <span className="text-in">{formatHMSms(clip.inSeconds)}</span>
-        <span className="mx-1.5 text-fg-subtle">→</span>
-        <span className="text-out">{formatHMSms(clip.outSeconds)}</span>
-        <span className="ml-2 text-fg-subtle">({formatHMSms(duration)})</span>
-      </span>
-
-      {clip.status.kind === "failed" && (
-        <span
-          className="ml-2 truncate text-danger"
-          title={clip.status.message}
-        >
-          {clip.status.message.split("\n")[0].slice(0, 60)}
-        </span>
+      {/* Progress bar background (only when encoding) */}
+      {isEncoding && (
+        <div
+          className="absolute inset-y-0 left-0 bg-accent/15 transition-[width] duration-200 ease-out"
+          style={{ width: `${percent}%` }}
+          aria-hidden="true"
+        />
       )}
 
-      <div className="ml-auto flex items-center gap-1">
-        {clip.status.kind === "done" && (
-          <button
-            type="button"
-            onClick={() => onRevealOutput(clip.status.kind === "done" ? clip.status.outputPath : "")}
-            className="rounded p-1 text-fg-muted transition hover:bg-bg-hover hover:text-fg"
-            aria-label="Open output folder"
-            title="Open output folder"
-          >
-            <FolderOpen className="h-3.5 w-3.5" />
-          </button>
+      <div className="relative flex items-center gap-3">
+        <span className="w-5 shrink-0 text-center font-mono text-fg-subtle">{index}</span>
+        <StatusIcon clip={clip} />
+        <span className="font-mono text-fg-muted text-mono-tabular">
+          <span className="text-in">{formatHMSms(clip.inSeconds)}</span>
+          <span className="mx-1.5 text-fg-subtle">→</span>
+          <span className="text-out">{formatHMSms(clip.outSeconds)}</span>
+          <span className="ml-2 text-fg-subtle">({formatHMSms(duration)})</span>
+        </span>
+
+        {isEncoding && (
+          <span className="ml-2 font-mono text-accent text-mono-tabular">
+            {percent.toFixed(0)}%
+            {speed != null && (
+              <span className="ml-2 text-fg-muted">{speed.toFixed(1)}×</span>
+            )}
+            {eta != null && eta > 0 && (
+              <span className="ml-2 text-fg-muted">ETA {formatEta(eta)}</span>
+            )}
+          </span>
         )}
-        {!isEncoding && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded p-1 text-fg-muted transition hover:bg-bg-hover hover:text-danger"
-            aria-label="Remove clip"
-            title="Remove clip"
+
+        {clip.status.kind === "failed" && (
+          <span
+            className="ml-2 truncate text-danger"
+            title={clip.status.message}
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
+            {clip.status.message.split("\n")[0].slice(0, 60)}
+          </span>
         )}
+
+        <div className="ml-auto flex items-center gap-1">
+          {clip.status.kind === "done" && (
+            <button
+              type="button"
+              onClick={() => onRevealOutput(clip.status.kind === "done" ? clip.status.outputPath : "")}
+              className="rounded p-1 text-fg-muted transition hover:bg-bg-hover hover:text-fg"
+              aria-label="Open output folder"
+              title="Open output folder"
+            >
+              <FolderOpen className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {!isEncoding && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="rounded p-1 text-fg-muted transition hover:bg-bg-hover hover:text-danger"
+              aria-label="Remove clip"
+              title="Remove clip"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
+}
+
+function formatEta(seconds: number): string {
+  if (seconds < 1) return "<1s";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}m${s.toString().padStart(2, "0")}s`;
 }
 
 function StatusIcon({ clip }: { clip: Clip }) {

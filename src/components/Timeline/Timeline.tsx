@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { formatHMSms } from "@/lib/time";
 
 type TimelineProps = {
@@ -7,6 +8,7 @@ type TimelineProps = {
   inSeconds: number;
   outSeconds: number;
   enabled: boolean;
+  thumbnails: string[];
   onSeek: (t: number) => void;
   onSetIn: (t: number) => void;
   onSetOut: (t: number) => void;
@@ -20,6 +22,7 @@ export function Timeline({
   inSeconds,
   outSeconds,
   enabled,
+  thumbnails,
   onSeek,
   onSetIn,
   onSetOut,
@@ -89,13 +92,32 @@ export function Timeline({
 
       <div
         ref={trackRef}
-        className={`relative mt-3 h-12 select-none rounded ${enabled ? "cursor-col-resize bg-bg-elevated" : "cursor-not-allowed bg-bg-elevated/40"}`}
+        className={`relative mt-3 h-12 select-none overflow-hidden rounded ${enabled ? "cursor-col-resize bg-bg-elevated" : "cursor-not-allowed bg-bg-elevated/40"}`}
         onPointerDown={handleTrackPointerDown}
       >
-        {/* Selected region */}
+        {/* Thumbnail strip background */}
+        {enabled && thumbnails.length > 0 && (
+          <div className="absolute inset-0 flex">
+            {thumbnails.map((p, i) =>
+              p ? (
+                <img
+                  key={i}
+                  src={convertFileSrc(p)}
+                  alt=""
+                  draggable={false}
+                  className="pointer-events-none h-full flex-1 select-none object-cover opacity-70"
+                />
+              ) : (
+                <div key={i} className="h-full flex-1 bg-bg-elevated/40" />
+              ),
+            )}
+          </div>
+        )}
+
+        {/* Selected region (gold tint over thumbs) */}
         {enabled && duration > 0 && (
           <div
-            className="absolute inset-y-0 bg-accent-muted/25"
+            className="pointer-events-none absolute inset-y-0 bg-accent/15"
             style={{
               left: `${pctOf(inSeconds)}%`,
               width: `${pctOf(outSeconds) - pctOf(inSeconds)}%`,
@@ -107,11 +129,11 @@ export function Timeline({
         {enabled && duration > 0 && (
           <>
             <div
-              className="absolute inset-y-0 left-0 bg-bg-base/70"
+              className="pointer-events-none absolute inset-y-0 left-0 bg-bg-base/65"
               style={{ width: `${pctOf(inSeconds)}%` }}
             />
             <div
-              className="absolute inset-y-0 right-0 bg-bg-base/70"
+              className="pointer-events-none absolute inset-y-0 right-0 bg-bg-base/65"
               style={{ width: `${100 - pctOf(outSeconds)}%` }}
             />
           </>

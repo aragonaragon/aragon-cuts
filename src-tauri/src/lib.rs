@@ -12,6 +12,7 @@ pub fn run() {
             commands::nvenc_check::check_nvenc,
             commands::ffprobe::probe_video,
             commands::ffmpeg::encode_short,
+            commands::thumbnails::generate_thumbnails,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
