@@ -147,10 +147,10 @@ function ClipRow({
 
         {clip.status.kind === "failed" && (
           <span
-            className="ml-2 truncate text-danger"
+            className="ml-2 min-w-0 flex-1 break-words text-danger"
             title={clip.status.message}
           >
-            {clip.status.message.split("\n")[0].slice(0, 60)}
+            {summarizeFfmpegError(clip.status.message)}
           </span>
         )}
 
@@ -181,6 +181,40 @@ function ClipRow({
       </div>
     </div>
   );
+}
+
+function summarizeFfmpegError(message: string): string {
+  // Surface the most useful 1-2 lines from the ffmpeg stderr buffer rather
+  // than the generic "exited with code N" prefix. Looks for the FIRST
+  // priority match, then includes the immediately following line for
+  // context (often where the actual reason is).
+  const lines = message
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const priorityPatterns = [
+    /Could not find tag/i,
+    /codec not currently supported/i,
+    /No such file/i,
+    /Permission denied/i,
+    /Conversion failed/i,
+    /\[mp4 @/i,
+    /Invalid argument/i,
+    /InitializeEncoder failed/i,
+    /OpenEncodeSessionEx failed/i,
+    /\[error\]/i,
+    /Error/i,
+  ];
+  for (const pattern of priorityPatterns) {
+    const idx = lines.findIndex((l) => pattern.test(l));
+    if (idx !== -1) {
+      const here = lines[idx];
+      const next = lines[idx + 1];
+      const combined = next ? `${here} · ${next}` : here;
+      return combined.slice(0, 200);
+    }
+  }
+  return (lines[0] ?? message).slice(0, 200);
 }
 
 function formatEta(seconds: number): string {

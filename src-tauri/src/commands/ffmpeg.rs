@@ -15,6 +15,33 @@ pub struct EncodeRequest {
     pub watermark_style: Option<String>,
     pub hook_text: Option<String>,
     pub hook_duration: f64,
+    /// Source audio codec name from ffprobe (e.g. "aac", "pcm_s16le").
+    /// Used to decide whether `-c:a copy` is safe or audio must be re-encoded
+    /// to AAC for the MP4 muxer.
+    pub source_audio_codec: Option<String>,
+}
+
+fn audio_codec_args(source_codec: Option<&str>) -> Vec<String> {
+    // Codecs the MP4 muxer accepts directly. Everything else must be
+    // re-encoded to AAC (otherwise ffmpeg exits with errors like
+    // "Could not find tag for codec pcm_s16le in stream").
+    let copy_ok = source_codec
+        .map(|c| c.to_ascii_lowercase())
+        .map(|c| {
+            matches!(
+                c.as_str(),
+                "aac" | "mp3" | "ac3" | "eac3" | "alac" | "mp4a" | "opus"
+            )
+        })
+        .unwrap_or(false);
+    if copy_ok {
+        ["-c:a", "copy"].iter().map(|s| s.to_string()).collect()
+    } else {
+        ["-c:a", "aac", "-b:a", "192k", "-ac", "2"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect()
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -31,7 +58,15 @@ struct EncodeProgress {
     total_seconds: f64,
 }
 
-const BASE_BLURRED_BG: &str = "[0:v]split=2[orig][bg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=20[bgblur];[orig]scale=1080:-2[fg];[bgblur][fg]overlay=(W-w)/2:(H-h)/2:format=auto";
+// Defensive pipeline for 10-bit / HDR / AV1 sources (common with NVIDIA
+// ShadowPlay, NVIDIA Record, and modern game captures). h264_nvenc rejects
+// anything that isn't plain 8-bit 4:2:0 with regular timestamps:
+//   - `format=yuv420p` at the input strips bit-depth + chroma to 8-bit 4:2:0
+//   - `setpts=PTS-STARTPTS` resets the timestamp base after `-ss` trim so
+//     NVENC doesn't see negative or huge PTS values
+//   - a final `format=yuv420p` after the overlay is belt-and-suspenders for
+//     any intermediate filter that promoted the format
+const BASE_BLURRED_BG: &str = "[0:v]format=yuv420p,setpts=PTS-STARTPTS,split=2[orig][bg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=20[bgblur];[orig]scale=1080:-2[fg];[bgblur][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p";
 
 fn sanitize_text(text: &str, max_len: usize) -> String {
     text.chars()
@@ -161,42 +196,53 @@ fn build_args(req: &EncodeRequest, output: &str) -> Vec<String> {
         "pipe:2".into(),
         "-stats_period".into(),
         "0.5".into(),
-        "-ss".into(),
-        format!("{:.3}", req.in_seconds),
-        "-i".into(),
-        req.input_path.clone(),
-        "-t".into(),
-        format!("{:.3}", duration),
-        "-filter_complex".into(),
-        filter,
-        "-map".into(),
-        "[vout]".into(),
-        "-map".into(),
-        "0:a?".into(),
+        "-fflags".into(),
+        "+genpts".into(),
     ];
 
+    // When NVENC is in use, route decoding through CUDA as well. This lights
+    // up the full GPU pipeline (e.g. av1_cuvid -> ... -> h264_nvenc) and
+    // — crucially — sidesteps libaom-av1's refusal to decode AV1 Level 6
+    // streams written by NVIDIA's own AV1 encoder (ShadowPlay / NVIDIA
+    // Record at 4K@60 use seq_level_idx=23, which libaom rejects).
     if req.use_nvenc {
+        args.extend(["-hwaccel", "cuda"].iter().map(|s| s.to_string()));
+    }
+
+    args.extend(
+        [
+            "-ss",
+            &format!("{:.3}", req.in_seconds),
+            "-i",
+            &req.input_path,
+            "-t",
+            &format!("{:.3}", duration),
+            "-filter_complex",
+            &filter,
+            "-map",
+            "[vout]",
+            "-map",
+            "0:a?",
+            // Force 8-bit 4:2:0 BEFORE picking the encoder so NVENC negotiates
+            // its input format correctly. The filter graph also outputs yuv420p
+            // but specifying it again here is cheap insurance.
+            "-pix_fmt",
+            "yuv420p",
+        ]
+        .iter()
+        .map(|s| s.to_string()),
+    );
+
+    if req.use_nvenc {
+        // Minimal NVENC config: preset + constant-quality target only.
+        // Removing -tune, explicit -rc, and -maxrate/-bufsize because some
+        // driver/source combinations (notably 4K AV1 + HDR captures from
+        // NVIDIA Record) reject the more elaborate VBR configuration with
+        // a generic -22 "invalid argument" error during encoder init.
         args.extend(
-            [
-                "-c:v",
-                "h264_nvenc",
-                "-preset",
-                "p5",
-                "-tune",
-                "hq",
-                "-rc",
-                "vbr",
-                "-cq",
-                "20",
-                "-b:v",
-                "0",
-                "-maxrate",
-                "12M",
-                "-bufsize",
-                "24M",
-            ]
-            .iter()
-            .map(|s| s.to_string()),
+            ["-c:v", "h264_nvenc", "-preset", "p5", "-cq", "23"]
+                .iter()
+                .map(|s| s.to_string()),
         );
     } else {
         args.extend(
@@ -206,18 +252,11 @@ fn build_args(req: &EncodeRequest, output: &str) -> Vec<String> {
         );
     }
 
+    args.extend(audio_codec_args(req.source_audio_codec.as_deref()));
     args.extend(
-        [
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "copy",
-            "-movflags",
-            "+faststart",
-            output,
-        ]
-        .iter()
-        .map(|s| s.to_string()),
+        ["-movflags", "+faststart", output]
+            .iter()
+            .map(|s| s.to_string()),
     );
 
     args

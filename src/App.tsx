@@ -400,6 +400,7 @@ function App() {
             watermark_style: channelName.trim() ? watermarkStyle : null,
             hook_text: hookText.trim() || null,
             hook_duration: hookDuration,
+            source_audio_codec: video.audioCodec,
           },
         });
         setClips((prev) =>
