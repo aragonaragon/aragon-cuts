@@ -45,3 +45,46 @@ desktop.ini
 # Temp / cache
 tmp/
 .cache/
+
+# === Security hardening (added 2026-05-20) ===
+# Catch-all for env files; allow only examples through
+.env*
+!.env.example
+!.env.sample
+!.env.template
+
+# Key / certificate files
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+*.asc
+*.gpg
+*.kdbx
+
+# Common credential filenames
+secrets/
+secrets.json
+credentials.json
+credentials/
+private/
+.netrc
+auth.json
+service-account*.json
+gcp-key*.json
+firebase-adminsdk*.json
+
+# Cloud CLI configs
+.aws/
+.gcloud/
+.azure/
+
+# Backups / dumps that may contain data
+*.bak
+*.dump
+*.sql.bak
+
