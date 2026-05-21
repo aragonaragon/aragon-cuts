@@ -14,7 +14,7 @@ export function TopBar({ nvenc, video, onOpen }: TopBarProps) {
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg-surface px-5">
       <div className="flex min-w-0 items-center gap-4">
         <h1 className="shrink-0 text-base font-semibold tracking-tight">
-          <span className="text-accent">Shorts</span> Maker
+          <span className="text-accent">Aragon</span> Cuts
         </h1>
         <div className="min-w-0 truncate text-sm">
           {video ? (

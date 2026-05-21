@@ -1,10 +1,17 @@
 # Handoff
 
-You're picking up a Tauri 2 + React desktop app called **Shorts Maker** that
+You're picking up a Tauri 2 + React desktop app called **Aragon Cuts** that
 converts horizontal videos to vertical 9:16 clips. The user (`aragonaragon`
 on GitHub, Arabic-speaking, Gulf dialect) made it for their own gameplay
 content. This document is everything you need to be productive without
 relearning what already hurt.
+
+Note: the **product name** is "Aragon Cuts" (window title, installer
+filename, README headline). The **package name** in `package.json` and
+`Cargo.toml` is still `shorts-maker` and the GitHub repo URL is still
+`/aragonaragon/shorts-maker`. The localStorage prefix is still
+`shorts-maker:` (changing it would wipe saved settings on existing
+installs). Don't unify the two — they're intentionally different.
 
 Read this top-to-bottom before touching anything. It will save you hours.
 
@@ -122,7 +129,7 @@ piece of state is a `useState` in `App.tsx`). Settings persist via
 
 | File | What it does |
 |---|---|
-| `src-tauri/tauri.conf.json` | `productName: "Shorts Maker"`, `identifier: "com.aragon.shortsmaker"`, version 0.2.1. `bundle.externalBin` registers the FFmpeg sidecars. `bundle.windows.webviewInstallMode = offlineInstaller` (bundles Webview2 into the .msi/.exe — adds ~120 MB but works on offline machines). |
+| `src-tauri/tauri.conf.json` | `productName: "Aragon Cuts"`, `identifier: "com.aragon.shortsmaker"` (identifier kept on the original slug — see top-of-doc note), version 0.2.1. `bundle.externalBin` registers the FFmpeg sidecars. `bundle.windows.webviewInstallMode = offlineInstaller` (bundles Webview2 into the .msi/.exe — adds ~120 MB but works on offline machines). |
 | `src-tauri/capabilities/default.json` | shell + store + dialog + fs + opener permissions, plus explicit `shell:allow-execute` for the two FFmpeg sidecars. |
 | `src-tauri/binaries/` | `ffmpeg-x86_64-pc-windows-msvc.exe` and `ffprobe-x86_64-pc-windows-msvc.exe`. **Gitignored** — these are ~96 MB each. Contributors run `scripts/setup-ffmpeg.ps1` to fetch them from gyan.dev. |
 | `scripts/setup-ffmpeg.ps1` | Downloads the Gyan.dev `ffmpeg-release-essentials` zip, extracts, renames to Tauri's `-<TARGET_TRIPLE>` convention. |
@@ -265,9 +272,9 @@ gh release delete v<previous> --yes --cleanup-tag
 # 6) Write release notes to a file, then create
 Set-Content $env:TEMP\notes-vX.Y.Z.md "..."
 gh release create v0.X.Y `
-  "src-tauri\target\release\bundle\nsis\Shorts Maker_0.X.Y_x64-setup.exe" `
-  "src-tauri\target\release\bundle\msi\Shorts Maker_0.X.Y_x64_en-US.msi" `
-  --title "Shorts Maker v0.X.Y" `
+  "src-tauri\target\release\bundle\nsis\Aragon Cuts_0.X.Y_x64-setup.exe" `
+  "src-tauri\target\release\bundle\msi\Aragon Cuts_0.X.Y_x64_en-US.msi" `
+  --title "Aragon Cuts v0.X.Y" `
   --notes-file "$env:TEMP\notes-vX.Y.Z.md" `
   --latest
 ```

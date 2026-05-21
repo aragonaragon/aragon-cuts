@@ -1,9 +1,9 @@
-# Shorts Maker
+# Aragon Cuts
 
 Convert horizontal videos to vertical 9:16 clips for YouTube Shorts, TikTok,
 Instagram Reels, and Twitch. Drop a video, set IN/OUT, click encode.
 
-![Shorts Maker](docs/hero.png)
+![Aragon Cuts](docs/hero.png)
 
 ## Features
 
@@ -33,7 +33,7 @@ Instagram Reels, and Twitch. Drop a video, set IN/OUT, click encode.
 Download the latest Windows installer from the
 [**Releases**](../../releases) page:
 
-- `Shorts Maker_<version>_x64-setup.exe` (recommended, ~250 MB)
+- `Aragon Cuts_<version>_x64-setup.exe` (recommended, ~250 MB)
 
 The installer is fully self-contained — Webview2 runtime and FFmpeg are
 bundled inside, so installation works on an offline machine.

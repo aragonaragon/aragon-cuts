@@ -1,6 +1,6 @@
 [package]
 name = "shorts-maker"
-version = "0.2.1"
+version = "0.2.2"
 description = "Convert horizontal videos to vertical 9:16 clips"
 authors = ["aragon"]
 edition = "2021"

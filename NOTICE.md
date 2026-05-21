@@ -1,6 +1,6 @@
 # Third-party software notices
 
-Shorts Maker bundles and links to the following third-party software. Each
+Aragon Cuts bundles and links to the following third-party software. Each
 component remains under its own license; this notice is provided for
 attribution and compliance.
 

@@ -1,4 +1,4 @@
 @echo off
-title Shorts Maker - dev
+title Aragon Cuts - dev
 cd /d "%~dp0"
 pnpm tauri dev
