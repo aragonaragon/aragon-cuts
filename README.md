@@ -91,8 +91,8 @@ bundled inside, so installation works on an offline machine.
 Requires **Node 20+**, **pnpm 9+**, **Rust stable**.
 
 ```powershell
-git clone https://github.com/<your-username>/shorts-maker.git
-cd shorts-maker
+git clone https://github.com/aragonaragon/aragon-cuts.git
+cd aragon-cuts
 pnpm install
 
 # One-time: download FFmpeg sidecars (~100 MB)
@@ -111,7 +111,7 @@ The build produces both NSIS (`.exe`) and WiX (`.msi`) installers under
 ## Project structure
 
 ```
-shorts-maker/
+aragon-cuts/
 ├── src/                    # React frontend (TypeScript)
 │   ├── App.tsx             # Main app state + drag-drop + queue
 │   ├── components/         # UI components
