@@ -287,7 +287,7 @@ function FormatInfo() {
       <ul className="space-y-1 text-fg-muted">
         <li>1080×1920 · same fps as source</li>
         <li>Blurred background fill</li>
-        <li>NVENC (H.264) · CQ 20</li>
+        <li>H.264 · NVENC / VideoToolbox / x264</li>
         <li>Audio copied from source</li>
       </ul>
     </section>

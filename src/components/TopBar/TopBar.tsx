@@ -1,15 +1,15 @@
 import { FolderOpen, Settings } from "lucide-react";
 import type { VideoInfo } from "@/types/video";
 
-type NvencState = "checking" | "available" | "unavailable" | "error";
+type EncoderState = "checking" | "nvenc" | "videotoolbox" | "software" | "error";
 
 type TopBarProps = {
-  nvenc: NvencState;
+  encoder: EncoderState;
   video: VideoInfo | null;
   onOpen: () => void;
 };
 
-export function TopBar({ nvenc, video, onOpen }: TopBarProps) {
+export function TopBar({ encoder, video, onOpen }: TopBarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg-surface px-5">
       <div className="flex min-w-0 items-center gap-4">
@@ -26,7 +26,7 @@ export function TopBar({ nvenc, video, onOpen }: TopBarProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <NvencBadge state={nvenc} />
+        <EncoderBadge state={encoder} />
         <button
           type="button"
           aria-label="Settings"
@@ -47,19 +47,21 @@ export function TopBar({ nvenc, video, onOpen }: TopBarProps) {
   );
 }
 
-function NvencBadge({ state }: { state: NvencState }) {
+function EncoderBadge({ state }: { state: EncoderState }) {
   const label =
     state === "checking"
       ? "probing…"
-      : state === "available"
+      : state === "nvenc"
         ? "NVENC"
-        : state === "unavailable"
-          ? "x264"
-          : "NVENC ?";
+        : state === "videotoolbox"
+          ? "VideoToolbox"
+          : state === "software"
+        ? "x264"
+        : "Encoder ?";
   const tone =
-    state === "available"
+    state === "nvenc" || state === "videotoolbox"
       ? "text-success"
-      : state === "unavailable"
+      : state === "software"
         ? "text-warning"
         : state === "error"
           ? "text-danger"

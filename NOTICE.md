@@ -21,6 +21,12 @@ complete corresponding source code is available in this repository and at
 the official FFmpeg project. FFmpeg developers and Gyan.dev are not
 affiliated with this project.
 
+The macOS installers ship FFmpeg and ffprobe built by
+`scripts/setup-ffmpeg-macos.sh` from the upstream FFmpeg 8.1.2 source tag.
+The build uses the FreeType, HarfBuzz, and FriBidi libraries for text rendering
+and Apple VideoToolbox for H.264 encoding. See the build script for the exact
+configuration flags and upstream source repositories.
+
 ## Tauri
 
 - Project: https://tauri.app/

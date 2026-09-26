@@ -12,7 +12,7 @@ import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { fromRaw, type RawVideoInfo, type VideoInfo } from "@/types/video";
 import { newClipId, type Clip, type EncodeProgressEvent } from "@/types/clip";
 
-type NvencState = "checking" | "available" | "unavailable" | "error";
+type EncoderState = "checking" | "nvenc" | "videotoolbox" | "software" | "error";
 
 const VIDEO_EXTENSIONS = ["mp4", "mov", "mkv", "avi", "webm", "m4v"];
 const MIN_CLIP_DURATION = 0.05;
@@ -66,7 +66,7 @@ function loadHookDuration(): number {
 }
 
 function App() {
-  const [nvenc, setNvenc] = useState<NvencState>("checking");
+  const [encoder, setEncoder] = useState<EncoderState>("checking");
   const [video, setVideo] = useState<VideoInfo | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -188,19 +188,19 @@ function App() {
     };
   }, []);
 
-  // NVENC probe
+  // Detect the best available H.264 encoder for this machine.
   useEffect(() => {
     let cancelled = false;
-    invoke<boolean>("check_nvenc")
-      .then((available) => {
+    invoke<string>("detect_encoder")
+      .then((detected) => {
         if (cancelled) return;
-        setNvenc(available ? "available" : "unavailable");
+        setEncoder(detected as EncoderState);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setNvenc("error");
+        setEncoder("error");
         // eslint-disable-next-line no-console
-        console.error("nvenc check failed:", err);
+        console.error("encoder detection failed:", err);
       });
     return () => {
       cancelled = true;
@@ -395,7 +395,7 @@ function App() {
             input_path: video.path,
             in_seconds: clip.inSeconds,
             out_seconds: clip.outSeconds,
-            use_nvenc: nvenc === "available",
+            use_hardware_encoder: encoder === "nvenc" || encoder === "videotoolbox",
             watermark: channelName.trim() || null,
             watermark_style: channelName.trim() ? watermarkStyle : null,
             hook_text: hookText.trim() || null,
@@ -422,7 +422,7 @@ function App() {
     }
 
     setIsEncoding(false);
-  }, [video, clips, nvenc, channelName, watermarkStyle, hookText, hookDuration]);
+  }, [video, clips, encoder, channelName, watermarkStyle, hookText, hookDuration]);
 
   const handleRevealOutput = useCallback((path: string) => {
     if (path) void revealItemInDir(path);
@@ -444,7 +444,7 @@ function App() {
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar nvenc={nvenc} video={video} onOpen={handleOpen} />
+      <TopBar encoder={encoder} video={video} onOpen={handleOpen} />
       <div className="flex flex-1 overflow-hidden">
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

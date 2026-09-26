@@ -21,8 +21,8 @@ Instagram Reels, and Twitch. Drop a video, set IN/OUT, click encode.
   styles (Boxed, Minimal, Gold pill, Outline)
 - **Hook text** — large gold headline in the bottom area for the first
   1–5 seconds of every clip, with smooth fade in/out
-- **Hardware-accelerated** encoding via NVENC on NVIDIA GPUs, automatic
-  fallback to libx264 on AMD / Intel / no-GPU machines
+- **Hardware-accelerated** encoding via NVENC on NVIDIA Windows PCs and
+  VideoToolbox on Macs, with software fallback where supported
 - **Audio copied unchanged** from the source (no quality loss on the audio
   track)
 - **Offline** — no telemetry, no auth, no cloud, no internet required after
@@ -30,26 +30,36 @@ Instagram Reels, and Twitch. Drop a video, set IN/OUT, click encode.
 
 ## Install (end users)
 
-Download the latest Windows installer from the
+Download the installer for your platform from the
 [**Releases**](../../releases) page:
 
-- `Aragon Cuts_<version>_x64-setup.exe` (recommended, ~250 MB)
+- Windows: `Aragon Cuts_<version>_x64-setup.exe` (recommended, ~250 MB)
+- Apple Silicon Mac: `Aragon Cuts_<version>_aarch64.dmg`
+- Intel Mac: `Aragon Cuts_<version>_x64.dmg`
 
-The installer is fully self-contained — Webview2 runtime and FFmpeg are
-bundled inside, so installation works on an offline machine.
+The installers are self-contained and include FFmpeg. The Windows installer
+also includes the WebView2 runtime, so installation works offline.
 
 ### Requirements
 
-- Windows 10 or 11 (64-bit)
+- Windows 10 or 11 (64-bit), or macOS 11 or newer
 - 8 GB RAM
 - ~500 MB free disk space
 - No internet required for install or use
 
+### First launch on macOS
+
+The direct-download Mac builds are ad-hoc signed and are not notarized by
+Apple. On first launch, macOS may ask you to allow the app in Privacy &
+Security. If it blocks the app, Control-click **Aragon Cuts** in Applications,
+choose **Open**, then confirm **Open**.
+
 ### Optional: GPU acceleration
 
-- **NVIDIA GPU** (GTX 1050 or newer) — uses NVENC, ~10× faster encoding
-- **AMD / Intel / no GPU** — falls back to CPU (libx264), works fine, slower
-- The app auto-detects on launch; no manual setup
+- **Windows with NVIDIA GPU** (GTX 1050 or newer) — uses NVENC
+- **Mac** — uses Apple VideoToolbox for hardware H.264 encoding
+- **AMD / Intel or no GPU on Windows** — uses software H.264 encoding
+- The app detects the available encoder on launch; no manual setup is needed
 
 ## How to use
 
@@ -80,8 +90,8 @@ bundled inside, so installation works on an offline machine.
 | --------------- | ---------------------------------- |
 | Resolution      | 1080 × 1920 (9:16 vertical)        |
 | Framerate       | Same as source                     |
-| Video codec     | H.264 (NVENC or libx264)           |
-| Quality         | CQ 20 (high)                       |
+| Video codec     | H.264 (NVENC, VideoToolbox, or libx264) |
+| Quality         | High quality (encoder optimized)   |
 | Audio           | Stream-copied from source          |
 | Container       | MP4 with `+faststart`              |
 | Naming          | `clip_<inSec>-<outSec>s.mp4`       |
@@ -95,7 +105,7 @@ git clone https://github.com/aragonaragon/aragon-cuts.git
 cd aragon-cuts
 pnpm install
 
-# One-time: download FFmpeg sidecars (~100 MB)
+# Windows: download FFmpeg sidecars (~100 MB)
 pwsh scripts/setup-ffmpeg.ps1
 
 # Dev (hot-reload)
@@ -105,8 +115,10 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-The build produces both NSIS (`.exe`) and WiX (`.msi`) installers under
-`src-tauri/target/release/bundle/`. The NSIS one is recommended.
+The Windows build produces NSIS (`.exe`) and WiX (`.msi`) installers under
+`src-tauri/target/release/bundle/`. On a Mac, run
+`bash scripts/setup-ffmpeg-macos.sh` before `pnpm tauri build`; the Mac build
+produces a `.dmg` under `src-tauri/target/<target>/release/bundle/dmg/`.
 
 ## Project structure
 

@@ -9,7 +9,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
-            commands::nvenc_check::check_nvenc,
+            commands::nvenc_check::detect_encoder,
             commands::ffprobe::probe_video,
             commands::ffmpeg::encode_short,
             commands::thumbnails::generate_thumbnails,

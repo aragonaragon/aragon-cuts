@@ -10,7 +10,7 @@ pub struct EncodeRequest {
     pub input_path: String,
     pub in_seconds: f64,
     pub out_seconds: f64,
-    pub use_nvenc: bool,
+    pub use_hardware_encoder: bool,
     pub watermark: Option<String>,
     pub watermark_style: Option<String>,
     pub hook_text: Option<String>,
@@ -82,7 +82,10 @@ fn sanitize_text(text: &str, max_len: usize) -> String {
         .to_string()
 }
 
+#[cfg(target_os = "windows")]
 const FONT_PATH: &str = "C\\:/Windows/Fonts/arialbd.ttf";
+#[cfg(target_os = "macos")]
+const FONT_PATH: &str = "/System/Library/Fonts/Supplemental/Arial Bold.ttf";
 
 /// Channel-name watermark in the TOP blurred zone, centered horizontally.
 /// The visual treatment (boxed, minimal, gold pill, outline) is chosen by `style`.
@@ -205,7 +208,8 @@ fn build_args(req: &EncodeRequest, output: &str) -> Vec<String> {
     // — crucially — sidesteps libaom-av1's refusal to decode AV1 Level 6
     // streams written by NVIDIA's own AV1 encoder (ShadowPlay / NVIDIA
     // Record at 4K@60 use seq_level_idx=23, which libaom rejects).
-    if req.use_nvenc {
+    #[cfg(target_os = "windows")]
+    if req.use_hardware_encoder {
         args.extend(["-hwaccel", "cuda"].iter().map(|s| s.to_string()));
     }
 
@@ -233,7 +237,8 @@ fn build_args(req: &EncodeRequest, output: &str) -> Vec<String> {
         .map(|s| s.to_string()),
     );
 
-    if req.use_nvenc {
+    #[cfg(target_os = "windows")]
+    if req.use_hardware_encoder {
         // Minimal NVENC config: preset + constant-quality target only.
         // Removing -tune, explicit -rc, and -maxrate/-bufsize because some
         // driver/source combinations (notably 4K AV1 + HDR captures from
@@ -251,6 +256,13 @@ fn build_args(req: &EncodeRequest, output: &str) -> Vec<String> {
                 .map(|s| s.to_string()),
         );
     }
+
+    #[cfg(target_os = "macos")]
+    args.extend(
+        ["-c:v", "h264_videotoolbox", "-q:v", "65", "-allow_sw", "1"]
+            .iter()
+            .map(|s| s.to_string()),
+    );
 
     args.extend(audio_codec_args(req.source_audio_codec.as_deref()));
     args.extend(
@@ -285,6 +297,11 @@ fn parse_progress_speed(line: &str) -> Option<f64> {
 
 #[tauri::command]
 pub async fn encode_short(app: AppHandle, req: EncodeRequest) -> Result<EncodeResult, String> {
+    #[cfg(target_os = "macos")]
+    if !req.use_hardware_encoder {
+        return Err("Apple VideoToolbox is unavailable. Reinstall the app and try again.".into());
+    }
+
     let output_path = build_output_path(&req.input_path, req.in_seconds, req.out_seconds);
     let output_str = output_path.to_string_lossy().to_string();
     let total = (req.out_seconds - req.in_seconds).max(0.001);
