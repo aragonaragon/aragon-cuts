@@ -25,8 +25,8 @@ export PKG_CONFIG_PATH="$(brew --prefix x264)/lib/pkgconfig:$(brew --prefix free
 build_root="$(mktemp -d)"
 trap 'rm -rf "$build_root"' EXIT
 
-# Pin the FFmpeg source to a tagged upstream release. Static linking keeps the
-# bundled sidecars independent of Homebrew and the user's machine.
+# Pin the FFmpeg source to a tagged upstream release. Its Homebrew libraries
+# are bundled into the app separately before the DMG is created.
 git clone --depth 1 --branch n8.1.2 https://git.ffmpeg.org/ffmpeg.git "$build_root/ffmpeg"
 cd "$build_root/ffmpeg"
 ./configure \

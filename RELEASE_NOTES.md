@@ -3,7 +3,7 @@
 ### macOS support
 
 - Native DMG installers for Apple Silicon and Intel Macs.
-- Bundled FFmpeg is built for the matching Mac architecture and includes the text rendering and H.264 encoding features used by the app.
+- Bundled FFmpeg is built for the matching Mac architecture, its dependent libraries are included in the app, and a real video encode is smoke-tested before packaging.
 - Mac uses Apple's VideoToolbox for hardware H.264 encoding. NVIDIA NVENC remains available on supported Windows PCs, with software fallback on other Windows systems.
 - macOS 11 or newer is required.
 

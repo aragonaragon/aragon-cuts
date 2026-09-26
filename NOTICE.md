@@ -24,8 +24,10 @@ affiliated with this project.
 The macOS installers ship FFmpeg and ffprobe built by
 `scripts/setup-ffmpeg-macos.sh` from the upstream FFmpeg 8.1.2 source tag.
 The build uses the FreeType, HarfBuzz, and FriBidi libraries for text rendering
-and Apple VideoToolbox for H.264 encoding. See the build script for the exact
-configuration flags and upstream source repositories.
+and Apple VideoToolbox for H.264 encoding. Their Homebrew-linked runtime
+libraries are included in the app bundle by
+`scripts/bundle-ffmpeg-macos.sh`. See both scripts for the exact build
+configuration and dependency repositories.
 
 ## Tauri
 

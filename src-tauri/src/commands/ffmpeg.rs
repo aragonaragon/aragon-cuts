@@ -259,7 +259,7 @@ fn build_args(req: &EncodeRequest, output: &str) -> Vec<String> {
 
     #[cfg(target_os = "macos")]
     args.extend(
-        ["-c:v", "h264_videotoolbox", "-q:v", "65", "-allow_sw", "1"]
+        ["-c:v", "h264_videotoolbox", "-b:v", "12M", "-allow_sw", "1"]
             .iter()
             .map(|s| s.to_string()),
     );
