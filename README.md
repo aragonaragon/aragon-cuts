@@ -33,9 +33,9 @@ Instagram Reels, and Twitch. Drop a video, set IN/OUT, click encode.
 Download the installer for your platform from the
 [**Releases**](../../releases) page:
 
-- Windows: `Aragon Cuts_<version>_x64-setup.exe` (recommended, ~250 MB)
-- Apple Silicon Mac: `Aragon Cuts_<version>_aarch64.dmg`
-- Intel Mac: `Aragon Cuts_<version>_x64.dmg`
+- Windows: `Aragon.Cuts_<version>_x64-setup.exe` (recommended, ~250 MB)
+- Apple Silicon Mac: `Aragon.Cuts_<version>_aarch64.dmg`
+- Intel Mac: `Aragon.Cuts_<version>_x64.dmg`
 
 The installers are self-contained and include FFmpeg. The Windows installer
 also includes the WebView2 runtime, so installation works offline.

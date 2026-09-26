@@ -13,6 +13,6 @@ These direct-download builds are ad-hoc signed and are not notarized by Apple. O
 
 ### Downloads
 
-- Aragon Cuts 0.3.0 aarch64.dmg — Apple Silicon (M1 and newer)
-- Aragon Cuts 0.3.0 x64.dmg — Intel Macs
-- Windows NSIS and MSI installers
+- Aragon.Cuts_0.3.0_aarch64.dmg — Apple Silicon (M1 and newer)
+- Aragon.Cuts_0.3.0_x64.dmg — Intel Macs
+- Aragon.Cuts_0.3.0_x64-setup.exe and Aragon.Cuts_0.3.0_x64_en-US.msi — Windows
