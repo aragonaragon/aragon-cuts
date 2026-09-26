@@ -100,7 +100,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" release-assets/* \
+          mapfile -d '' assets < <(find release-assets -type f \
+            \( -name '*.dmg' -o -name '*.exe' -o -name '*.msi' \) -print0)
+          if [ "${#assets[@]}" -ne 4 ]; then
+            echo "Expected two Mac DMGs and two Windows installers; found ${#assets[@]}" >&2
+            exit 1
+          fi
+          gh release create "$TAG" "${assets[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --title "Aragon Cuts $TAG" \
             --notes-file RELEASE_NOTES.md
